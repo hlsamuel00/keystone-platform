@@ -1,4 +1,4 @@
-# ADR-005: Envelope Encryption
+# ADR-005: Envelope Encryption for Secrets
 
 ## Status
 
@@ -10,93 +10,69 @@ Accepted
 
 ## Context
 
-Keystone Platform requires a secure and scalable mechanism for protecting secrets, sensitive data, and service-to-service communications. As the platform's cryptographic architecture evolved, a critical design question emerged: how should encryption keys be applied to data throughout the platform?
+Secret Vault is responsible for storing sensitive platform secrets. As the platform's cryptographic architecture evolved, a key design question emerged: should secrets be encrypted directly with high-value platform keys, or should an intermediate key hierarchy be introduced?
 
-A naïve approach would encrypt data directly using long-lived master keys. While simple, this model creates significant operational challenges. Key rotation becomes expensive, compromise of a master key increases blast radius, and cryptographic governance becomes tightly coupled to application data.
+Direct encryption using long-lived platform keys appears simple, but it creates significant operational challenges. Rotation of a platform key requires re-encryption of all protected secrets, increasing operational risk and coupling secret storage directly to key lifecycle management. Additionally, compromise of a high-value encryption key increases blast radius across all secrets protected by that key.
 
-The platform also requires support for secret rotation, recovery, auditing, rollback, service identity management, and future cryptographic migrations. These requirements favor a design that separates protection of data from protection of encryption keys.
-
-The architecture therefore required a model that minimizes blast radius, supports scalable rotation, and aligns with Keystone Platform's centralized key ownership philosophy.
+The architecture therefore required a mechanism that reduced blast radius while enabling efficient key rotation and maintaining centralized governance of cryptographic assets.
 
 ## Alternatives Considered
 
-### Option A: Direct Encryption with Master Keys
+### Option A: Direct Encryption with Platform Keys
 
-Data is encrypted directly using long-lived platform keys.
+Secrets are encrypted directly using long-lived platform encryption keys.
 
 #### Pros
 
 * Simple implementation
-* Fewer cryptographic components
 * Minimal key hierarchy
+* Straightforward storage model
 
 #### Cons
 
-* Large blast radius if a master key is compromised
+* Large blast radius if a platform key is compromised
 * Expensive key rotation operations
-* Tight coupling between encrypted data and master keys
-* Difficult recovery and migration workflows
+* Tight coupling between secret storage and key lifecycle management
+* Reduced flexibility for future cryptographic changes
 
-### Option B: Service-Owned Encryption Keys
+### Option B: Envelope Encryption
 
-Each service generates and manages its own encryption keys.
-
-#### Pros
-
-* Strong service-level ownership
-* Reduced dependency on centralized key management
-
-#### Cons
-
-* Inconsistent lifecycle management
-* Fragmented governance
-* Difficult auditing and recovery
-* Increased operational burden across services
-
-### Option C: Envelope Encryption
-
-Data is encrypted using Data Encryption Keys (DEKs), while DEKs are protected using Key Encryption Keys (KEKs).
+Secrets are encrypted using Data Encryption Keys (DEKs), while DEKs are protected using Key Encryption Keys (KEKs).
 
 #### Pros
 
 * Reduced blast radius
 * Efficient key rotation
 * Centralized governance
-* Simplified recovery workflows
-* Scalable cryptographic architecture
-* Aligns with centralized key ownership
+* Separation between secret protection and key protection
 
 #### Cons
 
 * Additional key hierarchy
 * Increased implementation complexity
-* Requires key wrapping and unwrapping workflows
+* Requires key wrapping and rewrapping workflows
 
 ## Decision
 
-Keystone Platform SHALL use envelope encryption as the standard encryption model across the platform.
+Keystone Platform SHALL use envelope encryption as the standard mechanism for protecting secrets.
 
-Data SHALL be encrypted using Data Encryption Keys (DEKs).
+Secrets SHALL be encrypted using Data Encryption Keys (DEKs).
 
-DEKs SHALL be encrypted and protected using Key Encryption Keys (KEKs).
+DEKs SHALL be encrypted and protected using Key Encryption Keys (KEKs) managed by KMS.
 
-KMS SHALL generate, store, govern, rotate, and retire both DEKs and KEKs.
+KMS SHALL govern the lifecycle of both DEKs and KEKs.
 
 Services SHALL NOT directly manage DEK or KEK lifecycle operations.
 
-Encrypted data SHALL be stored alongside a reference to the wrapped DEK required for decryption.
-
-Cryptographic operations involving DEKs and KEKs SHALL be performed through platform-controlled services in accordance with established authorization and policy controls.
-
 ## Rationale
 
-Envelope encryption provides a clear separation between protecting data and protecting encryption keys. This separation significantly reduces operational complexity when compared to direct encryption models.
+Envelope encryption separates protection of secret values from protection of encryption keys.
 
-Because data is encrypted with DEKs rather than KEKs, rotation of a KEK does not require immediate re-encryption of all protected data. Instead, the wrapped DEKs can be rewrapped using the new KEK. This dramatically reduces the cost and operational impact of rotation events.
+By encrypting secrets with DEKs and protecting those DEKs with KEKs, the platform reduces the impact of key compromise. Compromise of a single DEK affects only the secrets protected by that DEK rather than all secrets protected by a shared platform key.
 
-The model also limits blast radius. Compromise of a single DEK impacts only the data protected by that key, while KEKs remain governed through centralized controls. This aligns with Keystone Platform's broader philosophy of minimizing trust concentration while maintaining centralized governance.
+Envelope encryption also enables efficient key rotation. KEKs can be rotated independently without requiring immediate re-encryption of all protected secrets. Instead, DEKs can be rewrapped as necessary, significantly reducing the operational impact of rotation events.
 
-Envelope encryption additionally supports future platform goals including automated rotation, cryptographic migration, auditability, rollback capabilities, and scalable secret lifecycle management.
+This approach aligns with Keystone Platform's broader philosophy of centralized cryptographic governance while minimizing blast radius and operational complexity.
 
 ## Consequences
 
@@ -104,30 +80,28 @@ Envelope encryption additionally supports future platform goals including automa
 
 * Reduces blast radius of key compromise
 * Enables efficient key rotation
-* Supports centralized governance and auditing
-* Simplifies cryptographic recovery workflows
-* Aligns with KMS ownership model
-* Provides a scalable foundation for secret management
-* Supports future cryptographic migrations
+* Separates secret protection from key protection
+* Aligns with centralized KMS governance
+* Provides flexibility for future cryptographic changes
 
 ### Negative
 
-* Introduces additional key hierarchy complexity
-* Requires key wrapping and unwrapping workflows
+* Introduces additional cryptographic assets
+* Requires DEK tracking and lifecycle management
+* Requires key wrapping and rewrapping workflows
 * Increases implementation complexity compared to direct encryption
 
 ### Risks
 
 #### DEK Compromise
 
-A compromised DEK may expose data protected by that specific key.
+A compromised DEK may expose the secrets protected by that DEK.
 
 Mitigations:
 
 * Scoped DEK usage
 * Centralized lifecycle management
 * Rotation capabilities
-* Comprehensive auditing
 
 #### KEK Compromise
 
@@ -140,21 +114,10 @@ Mitigations:
 * Key rotation procedures
 * Policy-based access controls
 
-#### Rotation Failures
-
-Improper key rotation may result in temporary data access issues.
-
-Mitigations:
-
-* Versioned key management
-* Rollback support
-* Lazy rewrapping strategy
-* Operational recovery procedures
-
 ## Related Decisions
 
 * ADR-001: KMS Owns All Cryptographic Keys
 * ADR-002: Split Root Key Trust
 * ADR-004: Separate KMS and CSP Responsibilities
 * ADR-007: Secret Versioning and Retention
-* ADR-008: Lazy Rewrapping Strategy
+* ADR-008: Event Payload Encryption Beyond TLS
