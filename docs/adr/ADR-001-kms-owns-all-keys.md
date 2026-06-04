@@ -4,7 +4,7 @@
 
 Accepted
 
-## Date
+## Date Accepted
 
 2026-06-04
 
