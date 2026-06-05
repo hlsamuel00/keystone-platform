@@ -78,7 +78,7 @@ Root Key Share B SHALL be stored within the Vault trust boundary and persisted w
 
 Neither share SHALL be sufficient to reconstruct the root key independently.
 
-The complete root key SHALL only be reconstructed in memory for approved cryptographic operations and SHALL never be persisted in its reconstructed form.
+The complete root key SHALL only be reconstructed in volatile memory for approved cryptographic operations requiring root-key access.
 
 Following completion of the operation, the reconstructed root key SHALL be removed from memory.
 
@@ -89,6 +89,8 @@ The selected approach balances security, operational simplicity, and architectur
 A single root key creates an unacceptable concentration of trust and introduces a platform-wide single point of compromise. While a dedicated trust service could reduce this concentration, it would also introduce additional infrastructure and operational overhead without fundamentally eliminating the trust problem.
 
 By splitting the root key into independent shares, Keystone Platform reduces blast radius while preserving the centralized governance model established in ADR-001. Compromise of either the Operations Engine or the Vault is insufficient to reconstruct the complete root key, requiring an attacker to successfully compromise multiple trust domains before gaining access to the platform's highest-value cryptographic asset.
+
+This decision further establishes a recurring Keystone Platform principle: high-value trust relationships should be distributed where practical, while ownership remains centralized. Rather than introducing additional platform services or trust authorities, the architecture reduces trust concentration through separation of critical assets across independent ownership boundaries.
 
 This design also aligns with the platform's broader philosophy of separating responsibilities and minimizing trust concentration without introducing unnecessary services. The solution provides a meaningful security improvement while remaining operationally manageable and consistent with the existing KMS architecture.
 
@@ -116,15 +118,17 @@ This design also aligns with the platform's broader philosophy of separating res
 
 An attacker may obtain Root Key Share A.
 
-Mitigation:
-Possession of a single share is insufficient to reconstruct the root key.
+Mitigations:
+
+* Possession of Share A alone is insufficient to reconstruct the root key. Independent trust boundary, policy-based authorization, and audit logging apply to Operations Engine access.
 
 #### Vault Compromise
 
 An attacker may obtain Root Key Share B.
 
-Mitigation:
-Possession of a single share is insufficient to reconstruct the root key.
+Mitigations:
+
+* Possession of Share B alone is insufficient to reconstruct the root key. Independent trust boundary, encryption at rest, and audit logging apply to Vault access.
 
 #### Simultaneous Trust Domain Compromise
 
@@ -153,4 +157,4 @@ Mitigations:
 * ADR-001: KMS Owns All Cryptographic Keys
 * ADR-003: Platform-Managed Service Identity Keys
 * ADR-004: Separate KMS and CSP Responsibilities
-* ADR-005: Envelope Encryption
+* ADR-005: Envelope Encryption for Secrets

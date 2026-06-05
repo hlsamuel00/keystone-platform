@@ -71,18 +71,33 @@ All cryptographic assets are owned and managed by a centralized Key Management S
 * KMS becomes a critical dependency
 * Increased concentration of sensitive assets
 * Greater operational importance of KMS availability
+* A compromise of KMS has platform-wide impact — all cryptographic capabilities are potentially affected simultaneously
 
 ## Decision
 
-Keystone Platform adopts a centralized ownership model in which KMS is the sole authoritative owner of all cryptographic key material. No other service is permitted to independently generate, own, or govern cryptographic keys outside the controls established by KMS.
+KMS SHALL be the sole authoritative owner of all cryptographic key material within Keystone Platform.
 
-This decision applies to all key categories within the platform, including KEKs, DEKs, Service Identity Keys, Signing Keys, Transmission Keys, Certificate Authority Keys, and Root Key Shares.
+Services SHALL NOT independently generate, own, govern, rotate, retire, or otherwise manage cryptographic keys outside the controls established by KMS.
+
+This decision applies to all cryptographic key categories within the platform, including:
+
+| Key Type                    | Purpose                                         |
+| --------------------------- | ----------------------------------------------- |
+| Key Encryption Keys (KEKs)  | Protect Data Encryption Keys                    |
+| Data Encryption Keys (DEKs) | Encrypt secrets and protected data              |
+| Service Identity Keys       | Service authentication and identity             |
+| Signing Keys                | Payload authenticity and integrity verification |
+| Transmission Keys           | Event payload encryption                        |
+| Certificate Authority Keys  | Certificate issuance and trust establishment    |
+| Root Key Shares             | Root trust establishment and recovery workflows |
 
 ## Rationale
 
 Cryptographic assets are foundational platform resources whose lifecycle requirements extend beyond the needs of any individual service. Centralized ownership allows the platform to enforce consistent standards for generation, storage, rotation, auditing, recovery, retirement, and policy enforcement.
 
 The design philosophy adopted throughout Keystone Platform is that cryptography should be governed centrally while being consumed broadly. Services should focus on business functionality and consume cryptographic capabilities through well-defined platform services rather than becoming independent custodians of security-critical assets.
+
+This decision established one of the foundational architectural principles of Keystone Platform: ownership of security-critical resources should be explicit, centralized, and independently governable. Subsequent architectural decisions regarding cryptographic execution, service identity management, authorization policy ownership, and data ownership build upon this same ownership-oriented design philosophy.
 
 Centralized ownership also supports future platform goals such as automated rotation, compromise response workflows, dependency tracking, audit reporting, and policy-driven access controls. These capabilities become significantly more difficult when key ownership is distributed across multiple services.
 
@@ -134,4 +149,4 @@ Mitigations:
 * ADR-002: Split Root Key Trust
 * ADR-003: Platform-Managed Service Identity Keys
 * ADR-004: Separate KMS and CSP Responsibilities
-* ADR-005: Envelope Encryption
+* ADR-005: Envelope Encryption for Secrets

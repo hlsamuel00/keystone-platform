@@ -10,7 +10,7 @@ Accepted
 
 ## Context
 
-Machine identity is a foundational requirement for Keystone Platform. Services must be able to prove who they are, establish trust with platform components, obtain certificates, request tokens, and securely communicate with other services. As the platform's trust model evolved, a key architectural question emerged: who should own Service Identity Keys?
+Machine identity is a foundational requirement for Keystone Platform. Services must be able to prove who they are, establish trust with platform components, obtain certificates, request tokens, and securely communicate with other services. As the platform's trust model evolved, Keystone Platform required a clear answer to a foundational question: who owns Service Identity Keys?
 
 The most common approach in distributed systems is service-generated identity. Under this model, a service generates and manages its own identity keypair and presents the public portion to a certificate authority for validation and certificate issuance. This model provides strong local ownership and isolation, but introduces challenges around recovery, lifecycle management, auditing, and consistency across the platform.
 
@@ -71,7 +71,8 @@ KMS generates and owns Service Identity Keys while STS issues certificates and t
 
 * Increases sensitivity of KMS
 * Requires secure delivery of operational key material
-* Reduces service-level ownership of identity assets
+* Services cannot independently establish or recover their own identities
+* Identity provisioning becomes dependent on KMS availability and governance controls
 
 ## Decision
 
@@ -93,7 +94,7 @@ Centralized ownership significantly improves recovery capabilities. If a service
 
 Separating identity ownership from identity operations also creates clearer service boundaries. KMS owns key material, while STS consumes identity information to issue certificates, validate trust relationships, and issue authorization tokens. This aligns with the broader architectural principle of separating ownership from execution.
 
-The selected approach does increase the importance of KMS as a platform dependency. However, this risk was considered acceptable because the platform had already adopted centralized cryptographic ownership and introduced additional controls through split root-key trust and strong lifecycle governance.
+The increased sensitivity of KMS under this model is accepted because the platform had already committed to centralized cryptographic ownership and introduced specific controls — split root-key trust, policy enforcement, and lifecycle governance — to protect against that concentration.
 
 ## Consequences
 

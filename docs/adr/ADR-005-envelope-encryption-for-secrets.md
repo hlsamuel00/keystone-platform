@@ -52,6 +52,21 @@ Secrets are encrypted using Data Encryption Keys (DEKs), while DEKs are protecte
 * Increased implementation complexity
 * Requires key wrapping and rewrapping workflows
 
+### Option C: Per-Secret Unique Keys
+
+Each secret gets its own unique encryption key managed directly by KMS, with no intermediate DEK/KEK hierarchy.
+
+#### Pros
+
+* Maximum blast radius isolation — compromise of one key affects only one secret
+* No wrapping/rewrapping complexity
+
+#### Cons
+
+* KMS must manage one key per secret — potentially thousands of keys
+* Key proliferation creates governance and operational overhead
+* Rotation becomes more complex at scale
+
 ## Decision
 
 Keystone Platform SHALL use envelope encryption as the standard mechanism for protecting secrets.
@@ -90,6 +105,7 @@ This approach aligns with Keystone Platform's broader philosophy of centralized 
 * Requires DEK tracking and lifecycle management
 * Requires key wrapping and rewrapping workflows
 * Increases implementation complexity compared to direct encryption
+* KEK rotation triggers DEK rewrapping across all dependent secrets — the platform must maintain dependency mappings to identify and rewrap affected DEKs during rotation events.
 
 ### Risks
 
@@ -109,10 +125,11 @@ A compromised KEK may expose wrapped DEKs protected by that KEK.
 
 Mitigations:
 
-* Split Root Key Trust (ADR-002)
-* Centralized governance through KMS
 * Key rotation procedures
-* Policy-based access controls
+* Policy-based access controls limiting KEK operations
+* Audit logging on KEK access
+* Dependency mapping ensures affected DEKs are identified and rewrapped
+* Split Root Key Trust (ADR-002) protects the root key from which KEKs derive
 
 ## Related Decisions
 

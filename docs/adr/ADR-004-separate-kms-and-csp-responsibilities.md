@@ -101,7 +101,7 @@ By centralizing cryptographic execution within CSP, Keystone Platform reduces th
 
 Separating ownership from execution also creates clearer service boundaries. KMS governs cryptographic assets while CSP consumes those assets to perform approved operations. This mirrors other architectural patterns within Keystone Platform, where policy storage is separated from policy enforcement and ownership is separated from execution whenever practical.
 
-Although this design introduces an additional service dependency and network hop, the architecture prioritizes governance, trust boundary reduction, auditability, and platform consistency over minimizing operational complexity.
+Keystone Platform prioritizes governance, trust boundary reduction, auditability, and platform consistency. The additional service dependency and network hop are accepted costs of that commitment.
 
 ## Consequences
 
