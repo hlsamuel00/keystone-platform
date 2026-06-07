@@ -103,7 +103,7 @@ alternatives are often the most useful part.
 | [ADR-005](docs/adr/ADR-005-envelope-encryption-for-secrets.md) | Envelope Encryption for Secrets |
 | [ADR-006](docs/adr/ADR-006-sr-policy-authority-sts-enforcement.md) | SR as Policy Authority, STS as Enforcement Point |
 | [ADR-007](docs/adr/ADR-007-token-based-runtime-authorization.md) | Token-Based Runtime Authorization |
-| [ADR-008](docs/adr/ADR-008-event-payload-encryption-beyond-tls.md) | Event Payload Encryption and Signing Beyond TLS |
+| [ADR-008](docs/adr/ADR-008-event-payload-encryption-and-signing-beyond-tls.md) | Event Payload Encryption and Signing Beyond TLS |
 | [ADR-009](docs/adr/ADR-009-language-selection.md) | Language Selection |
 | [ADR-010](docs/adr/ADR-010-storage-engine-selection.md) | Storage Engine Selection |
 | [ADR-011](docs/adr/ADR-011-cicd-pipeline-and-review-controls.md) | CI/CD Pipeline and Review Controls |
