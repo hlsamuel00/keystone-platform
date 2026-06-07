@@ -1,0 +1,118 @@
+# Security Review Pipeline — Keystone Platform
+#
+# Responsibilities:
+#   - AI-assisted security domain review on every PR against main
+#   - Reads platform-specific security constraints from .github/prompts/
+#   - Posts structured review as a PR comment
+#   - Acts as a required status check before merge
+#
+# Tools:
+#   - CodeRabbit (GitHub App) — general code quality, installed separately
+#   - Claude (Anthropic API) — security domain review, this workflow
+#
+# Gate order:
+#   PR opened → security-review runs → result posted as PR comment
+#
+# See ADR-012 for AI-assisted code review decisions.
+# See .github/prompts/security-review-prompt.md for review constraints.
+
+name: Security Review
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+
+  # ── Claude Security Review ─────────────────────────────────────────────────
+  # Reads the security review prompt from .github/prompts/ and submits
+  # the PR diff to the Anthropic API for security-domain analysis.
+  # Posts findings as a structured PR comment.
+  # See ADR-012 for rationale and tool selection.
+
+  security-review:
+    name: Security Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Anthropic SDK
+        run: pip install anthropic
+
+      - name: Generate PR diff
+        id: diff
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git diff origin/${{ github.base_ref }}...HEAD > pr_diff.txt
+          echo "Diff generated — $(wc -l < pr_diff.txt) lines"
+
+      - name: Run Claude security review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python3 << 'PYTHON'
+          import anthropic
+          import os
+
+          # Load security review prompt
+          with open(".github/prompts/security-review-prompt.md", "r") as f:
+              system_prompt = f.read()
+
+          # Load PR diff
+          with open("pr_diff.txt", "r") as f:
+              diff = f.read()
+
+          # Truncate diff if too large — avoids token limit issues
+          max_diff_chars = 30000
+          if len(diff) > max_diff_chars:
+              diff = diff[:max_diff_chars] + "\n\n[Diff truncated — review remaining changes manually]"
+
+          client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+          message = client.messages.create(
+              model="claude-sonnet-4-20250514",
+              max_tokens=2048,
+              system=system_prompt,
+              messages=[
+                  {
+                      "role": "user",
+                      "content": f"Please review the following PR diff against the platform security constraints:\n\n```diff\n{diff}\n```"
+                  }
+              ]
+          )
+
+          review = message.content[0].text
+
+          # Write review to file for next step
+          with open("security_review.md", "w") as f:
+              f.write("## Keystone Platform — Security Review\n\n")
+              f.write("_Automated security-domain review powered by Claude._\n")
+              f.write("_General code quality review provided by CodeRabbit._\n\n")
+              f.write("---\n\n")
+              f.write(review)
+
+          print("Security review complete")
+          PYTHON
+
+      - name: Post review as PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file security_review.md

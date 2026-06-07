@@ -1,0 +1,363 @@
+# CI Pipeline — Keystone Platform
+#
+# Responsibilities:
+#   - Secret scanning on every PR (repo-wide, first gate)
+#   - Per-service compilation checks (second gate)
+#   - Per-service test runs (third gate)
+#   - Per-service Docker image builds on merge to main (post-merge, phase 1)
+#
+# Gate order per service:
+#   secret-scan → <service>-compile → <service>-tests → merge → <service>-docker
+#
+# Docker builds will be promoted to a pre-merge gate in phase 2
+# once Dockerfiles contain real build definitions.
+#
+# See ADR-011 for CI/CD pipeline decisions.
+# See ADR-013 for monorepo path-trigger strategy.
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+
+  # ── Secret Scanning ────────────────────────────────────────────────────────
+  # First gate — runs on every PR regardless of which service changed.
+  # All subsequent jobs depend on this passing.
+  # A secret commit anywhere in the repo is a platform-wide concern.
+  # See ADR-011 for secret scanning rationale.
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+  # ── KMS ───────────────────────────────────────────────────────────────────
+  # Gate chain: secret-scan → kms-compile → kms-tests → merge → kms-docker
+  # Triggered only when KMS service files change.
+  # Language: Scala / sbt
+  # See ADR-009 for language selection rationale.
+
+  kms-compile:
+    name: KMS Compile
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/kms')
+    defaults:
+      run:
+        working-directory: services/kms
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Compile KMS
+        run: echo "sbt compile — placeholder until build.sbt is defined"
+
+  kms-tests:
+    name: KMS Tests
+    runs-on: ubuntu-latest
+    needs: kms-compile
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/kms')
+    defaults:
+      run:
+        working-directory: services/kms
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Run KMS tests
+        run: echo "KMS tests will run here — placeholder until implementation begins"
+
+  kms-docker:
+    name: KMS Docker Build
+    runs-on: ubuntu-latest
+    needs: kms-tests
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build KMS Docker image
+        run: |
+          echo "Docker build for KMS will run here"
+          echo "Image will be tagged with commit SHA: ${{ github.sha }}"
+
+  # ── CSP ───────────────────────────────────────────────────────────────────
+  # Gate chain: secret-scan → csp-compile → csp-tests → merge → csp-docker
+  # Triggered only when CSP service files change.
+  # Language: Scala / sbt
+  # See ADR-009 for language selection rationale.
+
+  csp-compile:
+    name: CSP Compile
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/csp')
+    defaults:
+      run:
+        working-directory: services/csp
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Compile CSP
+        run: echo "sbt compile — placeholder until build.sbt is defined"
+
+  csp-tests:
+    name: CSP Tests
+    runs-on: ubuntu-latest
+    needs: csp-compile
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/csp')
+    defaults:
+      run:
+        working-directory: services/csp
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Run CSP tests
+        run: echo "CSP tests will run here — placeholder until implementation begins"
+
+  csp-docker:
+    name: CSP Docker Build
+    runs-on: ubuntu-latest
+    needs: csp-tests
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build CSP Docker image
+        run: |
+          echo "Docker build for CSP will run here"
+          echo "Image will be tagged with commit SHA: ${{ github.sha }}"
+
+  # ── SR ────────────────────────────────────────────────────────────────────
+  # Gate chain: secret-scan → sr-compile → sr-tests → merge → sr-docker
+  # Triggered only when SR service files change.
+  # Language: Python
+  # See ADR-009 for language selection rationale.
+
+  sr-compile:
+    name: SR Compile
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/sr')
+    defaults:
+      run:
+        working-directory: services/sr
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile SR
+        run: echo "python -m py_compile — placeholder until src files exist"
+
+  sr-tests:
+    name: SR Tests
+    runs-on: ubuntu-latest
+    needs: sr-compile
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/sr')
+    defaults:
+      run:
+        working-directory: services/sr
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run SR tests
+        run: echo "SR tests will run here — placeholder until implementation begins"
+
+  sr-docker:
+    name: SR Docker Build
+    runs-on: ubuntu-latest
+    needs: sr-tests
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build SR Docker image
+        run: |
+          echo "Docker build for SR will run here"
+          echo "Image will be tagged with commit SHA: ${{ github.sha }}"
+
+  # ── STS ───────────────────────────────────────────────────────────────────
+  # Gate chain: secret-scan → sts-compile → sts-tests → merge → sts-docker
+  # Triggered only when STS service files change.
+  # Language: TBD — see ADR-009.
+
+  sts-compile:
+    name: STS Compile
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/sts')
+    defaults:
+      run:
+        working-directory: services/sts
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile STS
+        run: echo "Compile step — placeholder until language and toolchain are defined"
+
+  sts-tests:
+    name: STS Tests
+    runs-on: ubuntu-latest
+    needs: sts-compile
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/sts')
+    defaults:
+      run:
+        working-directory: services/sts
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run STS tests
+        run: echo "STS tests will run here — placeholder until implementation begins"
+
+  sts-docker:
+    name: STS Docker Build
+    runs-on: ubuntu-latest
+    needs: sts-tests
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build STS Docker image
+        run: |
+          echo "Docker build for STS will run here"
+          echo "Image will be tagged with commit SHA: ${{ github.sha }}"
+
+  # ── SV ────────────────────────────────────────────────────────────────────
+  # Gate chain: secret-scan → sv-compile → sv-tests → merge → sv-docker
+  # Triggered only when SV service files change.
+  # Language: TBD — see ADR-009.
+
+  sv-compile:
+    name: SV Compile
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/sv')
+    defaults:
+      run:
+        working-directory: services/sv
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile SV
+        run: echo "Compile step — placeholder until language and toolchain are defined"
+
+  sv-tests:
+    name: SV Tests
+    runs-on: ubuntu-latest
+    needs: sv-compile
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.changed_files, 'services/sv')
+    defaults:
+      run:
+        working-directory: services/sv
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run SV tests
+        run: echo "SV tests will run here — placeholder until implementation begins"
+
+  sv-docker:
+    name: SV Docker Build
+    runs-on: ubuntu-latest
+    needs: sv-tests
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build SV Docker image
+        run: |
+          echo "Docker build for SV will run here"
+          echo "Image will be tagged with commit SHA: ${{ github.sha }}"
