@@ -1,0 +1,10 @@
+# Force LF line endings for all files
+* text=auto eol=lf
+
+# Explicitly enforce LF for yaml and markdown
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.sbt text eol=lf
+*.py text eol=lf
+*.scala text eol=lf
