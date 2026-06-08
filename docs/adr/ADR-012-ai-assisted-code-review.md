@@ -191,3 +191,46 @@ Mitigations:
 * ADR-008: Event Payload Encryption and Signing Beyond TLS
 * ADR-011: CI/CD Pipeline and Review Controls
 * ADR-013: Monorepo Repository Structure
+
+## Amendments
+
+### Amendment 1 — 2026-06-04
+
+#### GitGuardian
+GitGuardian activated automatically on the public repository
+and was added as a required status check. The platform now
+operates three independent secret scanning layers:
+TruffleHog, GitGuardian, and the Claude security review.
+No configuration was required — GitGuardian activates on
+all public repositories automatically.
+
+#### Human Approval Constraint
+Required approvals were set to 0 due to GitHub's restriction
+that PR authors cannot approve their own PRs on personal
+accounts. The AI review gates — CodeRabbit, Claude security
+review, GitGuardian, and TruffleHog — serve as the primary
+merge controls. A human approval requirement SHALL be
+reinstated if additional contributors join the project.
+
+#### TruffleHog Known Limitations
+Two known limitations were identified during implementation:
+
+1. The --only-verified flag restricts detection to secrets
+   verifiable against live external services. Internal
+   platform credentials and rotated keys will not be
+   flagged. This gap is accepted at MVP stage and SHALL
+   be revisited before production deployment.
+
+2. Force push events and first-push-to-branch scenarios
+   may resolve github.event.before to the null SHA
+   (0000000000000000000000000000000000000000), potentially
+   causing TruffleHog to scan zero commits silently. This
+   is a known TruffleHog behavior. Full-history scanning
+   as a fallback is deferred to a future iteration.
+
+#### Model Identifier Policy
+Pinned, dated model identifiers are preferred for the
+Claude security review action to ensure reproducible and
+auditable review behavior between PRs. Model identifiers
+SHALL be reviewed and updated deliberately rather than
+tracking aliases that may resolve differently over time.
