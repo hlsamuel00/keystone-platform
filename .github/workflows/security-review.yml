@@ -84,20 +84,23 @@ jobs:
               diff = diff[:max_diff_chars] + "\n\n[Diff truncated — review remaining changes manually]"
 
           client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+          try: 
+            message = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=2048,
+                system=system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Please review the following PR diff against the platform security constraints:\n\n```diff\n{diff}\n```"
+                    }
+                ]
+            )
 
-          message = client.messages.create(
-              model="claude-sonnet-4-20250514",
-              max_tokens=2048,
-              system=system_prompt,
-              messages=[
-                  {
-                      "role": "user",
-                      "content": f"Please review the following PR diff against the platform security constraints:\n\n```diff\n{diff}\n```"
-                  }
-              ]
-          )
-
-          review = message.content[0].text
+            review = message.content[0].text
+          except Exception as e:
+            print(f"Security review failed: {e}")
+            exit(1)
 
           # Write review to file for next step
           with open("security_review.md", "w") as f:
