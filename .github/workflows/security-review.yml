@@ -98,9 +98,12 @@ jobs:
             )
 
             review = message.content[0].text
+          except anthropic.AnthropicError as e:
+              print(f"Anthropic API error: {e}")
+              exit(1)
           except Exception as e:
-            print(f"Security review failed: {e}")
-            exit(1)
+              print(f"Unexpected error during security review: {e}")
+              exit(1)
 
           # Write review to file for next step
           with open("security_review.md", "w") as f:
