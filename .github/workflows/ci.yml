@@ -45,8 +45,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate PR title
+        env: 
+          TITLE: ${{ github.event.pull_request.title }}
         run: |
-          TITLE="${{ github.event.pull_request.title }}"
           if ! echo "$TITLE" | grep -qE '^(feat|fix|docs|adr|ci|chore|refactor|test)(\(.+\))?: .+'; then
             echo "PR title '$TITLE' does not follow conventional commit format"
             echo "Expected format: <type>: <description>"
