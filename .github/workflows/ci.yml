@@ -43,14 +43,15 @@ jobs:
   pr-title-check:
     name: PR Title Check
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - name: Validate PR title
-        env: 
+        env:
           TITLE: ${{ github.event.pull_request.title }}
         run: |
-          if ! echo "$TITLE" | grep -qE '^(feat|fix|docs|adr|ci|chore|refactor|test)(\(.+\))?: .+'; then
+          if ! echo "$TITLE" | grep -qE '^(feat|fix|docs|adr|ci|chore|refactor|test)(\(.+\))?: .+$'; then
             echo "PR title '$TITLE' does not follow conventional commit format"
-            echo "Expected format: <type>: <description>"
+            echo "Expected format: <type>(<scope>): <description>  (scope is optional)"
             echo "Valid types: feat, fix, docs, adr, ci, chore, refactor, test"
             exit 1
           fi
