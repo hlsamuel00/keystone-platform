@@ -2,9 +2,14 @@ ThisBuild / scalaVersion := "3.6.4"
 ThisBuild / organization := "com.keystone"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
+
 lazy val kms = ( project in file ("."))
     .settings(
         name := "kms",
+        scalacOptions ++= Seq(
+            "-Werror",                             
+            "-Wconf:cat=other-match-analysis:error" 
+        ),
         libraryDependencies ++= Seq(
             // Testing
             "org.scalatest" %% "scalatest" % "3.2.19" % Test,
