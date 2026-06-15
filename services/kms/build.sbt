@@ -8,7 +8,6 @@ lazy val kms = ( project in file ("."))
         name := "kms",
         scalacOptions ++= Seq(
             "-Werror",                             
-            "-Wconf:cat=other-match-analysis:error" 
         ),
         libraryDependencies ++= Seq(
             // Testing
