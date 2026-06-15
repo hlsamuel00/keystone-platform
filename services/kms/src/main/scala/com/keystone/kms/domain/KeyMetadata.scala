@@ -30,7 +30,7 @@ case class KeyMetadata private (
 
 /** Note: direct construction via KeyMetadata(...) is prevented by the private
   * constructor - enforced at compile time, not runtime. Attempting KeyMetadata(...)
-  * will not compile; the companion object constructor must be used. 
+  * will not compile; the companion object constructor must be used.
   */
 object KeyMetadata:
     def createManagedKey(
@@ -38,7 +38,7 @@ object KeyMetadata:
                         algorithm: KeyAlgorithm,
                         description: String,
                         createdDate: Instant,
-                        expirationDate: Instant): KeyMetadata =                    
+                        expirationDate: Instant): KeyMetadata =
 
         KeyMetadata(
             owner=owner,
@@ -62,3 +62,12 @@ object KeyMetadata:
             createdDate=Instant.now(),
             expirationDate=None,
             lastRotatedDate=None)
+
+    extension (m: KeyMetadata)
+        def withRotation(rotatedDate: Instant, newExpirationDate: Instant): KeyMetadata =
+            m.copy(
+                lastRotatedDate=Some(rotatedDate),
+                expirationDate=Some(newExpirationDate))
+        
+        def withRootKeyShareRotation(rotatedDate: Instant): KeyMetadata =
+            m.copy(lastRotatedDate=Some(rotatedDate))

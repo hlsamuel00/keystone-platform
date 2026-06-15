@@ -21,7 +21,7 @@ class KeyMetadataSpec extends AnyFlatSpec with Matchers:
         testKeyMetadata.expirationDate shouldBe defined
     }
 
-    it should "not set expirationdate when creating a root key share" in {
+    it should "not set expirationDate when creating a root key share" in {
         rootKeyMetadata.expirationDate shouldBe empty
     }
 
@@ -33,4 +33,30 @@ class KeyMetadataSpec extends AnyFlatSpec with Matchers:
     it should "not set lastRotatedDate for newly created keys" in {
         testKeyMetadata.lastRotatedDate shouldBe empty
         rootKeyMetadata.lastRotatedDate shouldBe empty
+    }
+
+    it should "update lastRotatedDate and expirationDate while preserving " +
+      "all other fields for rotated managed keys" in {
+        val rotated = testKeyMetadata.withRotation(
+            Instant.now.plus(1, ChronoUnit.DAYS),
+            Instant.now.plus(120, ChronoUnit.DAYS))
+
+        rotated.lastRotatedDate shouldBe defined
+        rotated.owner shouldBe testKeyMetadata.owner
+        rotated.description shouldBe testKeyMetadata.description
+        rotated.algorithm shouldBe testKeyMetadata.algorithm
+        (rotated.expirationDate, testKeyMetadata.expirationDate) match
+            case (Some(newExp), Some(oldExp)) => newExp.isAfter(oldExp) shouldBe true
+            case _ => fail("Expected both expiration dates to be defined")
+    }
+
+    it should "update lastRotatedDate and preserve all other fields " +
+      "for rotated root key shares" in {
+        val rotated = rootKeyMetadata.withRootKeyShareRotation(Instant.now())
+
+        rotated.lastRotatedDate shouldBe defined
+        rotated.expirationDate shouldBe empty
+        rotated.owner shouldBe rootKeyMetadata.owner
+        rotated.description shouldBe rootKeyMetadata.description
+        rotated.algorithm shouldBe rootKeyMetadata.algorithm
     }
