@@ -6,9 +6,9 @@ import org.scalatest.matchers.should.Matchers
 class PermissionChangeStatusSpec extends AnyFlatSpec with Matchers:
     "PermissionChangeStatus" should "cover all statuses exhaustively" in {
         def describePermissionChangeStatus(s: PermissionChangeStatus): String = s match
-            case PermissionChangeStatus.Approved => "Approved"
-            case PermissionChangeStatus.Rejected => "Rejected"
+            case PermissionChangeStatus.Granted => "Granted"
+            case PermissionChangeStatus.Revoked => "Revoked"
             
-        describePermissionChangeStatus(PermissionChangeStatus.Approved) shouldBe "Approved"
-        describePermissionChangeStatus(PermissionChangeStatus.Rejected) shouldBe "Rejected"
+        describePermissionChangeStatus(PermissionChangeStatus.Granted) shouldBe "Granted"
+        describePermissionChangeStatus(PermissionChangeStatus.Revoked) shouldBe "Revoked"
     }
