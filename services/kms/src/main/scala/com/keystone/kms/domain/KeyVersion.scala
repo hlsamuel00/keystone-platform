@@ -11,22 +11,31 @@ import java.util.UUID
   * - versionNumber: Int - a sequential numerical value for the version number intended
   *   for human readability
   * - createdAt: Instant - a timestamp of when the version was created
-  * - keyState: KeyState - the current state of the key throughout its lifecycle
+  * - status: KeyVersionStatus - the current status of the key version throughout its lifecycle
   */
 case class KeyVersion private (
                               versionId: UUID,
                               versionNumber: Int,
                               createdAt: Instant,
-                              keyState: KeyState)
+                              status: KeyVersionStatus,
+                              expirationDate: Option[Instant])
 
 object KeyVersion:
     def createVersion(
                        previousVersion: Option[KeyVersion],
                        createdAt: Instant,
-                       keyState: KeyState): KeyVersion =
+                       status: KeyVersionStatus,
+                       expirationDate: Option[Instant]): KeyVersion =
+
         val nextVersionNumber = previousVersion.map(_.versionNumber + 1).getOrElse(1)
-        KeyVersion(UUID.randomUUID(), nextVersionNumber, createdAt, keyState)
+        KeyVersion(
+            versionId=UUID.randomUUID(),
+            versionNumber=nextVersionNumber,
+            createdAt=createdAt,
+            status=status,
+            expirationDate=expirationDate)
 
     extension (v: KeyVersion)
-        def withKeyState(state: KeyState): KeyVersion =
-            v.copy(keyState=state)
+        def withStatus(target: KeyVersionStatus): Either[String, KeyVersion] =
+            KeyVersionStatusTransition.transition(v.status, target)
+              .map(newStatus => v.copy(status=newStatus))
