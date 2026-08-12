@@ -11,10 +11,8 @@ lazy val kms = ( project in file ("."))
         ),
         libraryDependencies ++= Seq(
             // Testing
-            "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+            "org.scalatest" %% "scalatest" % "3.2.20" % Test,
         ),
 
-        // Ensure tests directory is recognized
         Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
-        Test / scalaSource := baseDirectory.value / "tests" / "src" / "test" / "scala"
     )
