@@ -7,7 +7,10 @@ lazy val kms = ( project in file ("."))
     .settings(
         name := "kms",
         scalacOptions ++= Seq(
-            "-Werror",                             
+            "-Werror",
+            "-unchecked",
+            "-feature",
+            "-deprecation"
         ),
         libraryDependencies ++= Seq(
             // Testing
