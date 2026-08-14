@@ -101,8 +101,20 @@ object ManagedKey:
         )
 
     extension (k: ManagedKey)
+        /** Adds a dependent key to this key's dependency set. Represents that the
+          * dependent key relies on this key's material — used to identify affected
+          * keys during rotation events (e.g., DEK rewrapping when a KEK rotates).
+          */
         def withDependency(dependentKeyId: KeyId): ManagedKey =
             k.copy(dependencies=k.dependencies + dependentKeyId)
+
+        /** Removes a dependent key from this key's dependency set. Used once a
+          * dependent key has been rewrapped or retired and no longer relies on
+          * this key's material. Removing a KeyId not present in the set is a
+          * no-op — this method never fails.
+          */
+        def removeDependency(dependentKeyId: KeyId): ManagedKey =
+            k.copy(dependencies=k.dependencies - dependentKeyId)
 
         /** Provisions the first version of key material for this key, transitioning it
           * from PendingApproval to active operation. Must be called after the engine has
@@ -388,8 +400,9 @@ object RootKeyShare:
                 case None =>
                     Left("Illegal request: cannot request provisioning key with missing PendingApproval flag.")
                 case Some(KeyStatusNotice.PendingApproval) =>
+                    val now = Instant.now()
                     k.versions
-                        .provision(Instant.now(), Some(Instant.now().plus(1826, ChronoUnit.DAYS)))
+                        .provision(now, Some(now.plus(1826, ChronoUnit.DAYS)))
                         .map { updatedVersions =>
                             k.copy(versions = updatedVersions)
                         }
@@ -409,8 +422,9 @@ object RootKeyShare:
         def lifecycleRotation: Either[String, RootKeyShare] =
             k.exceptionStatus match
                 case None =>
+                    val now = Instant.now()
                     k.versions
-                        .lifecycleRotation(Instant.now(), Some(Instant.now().plus(1826, ChronoUnit.DAYS)))
+                        .lifecycleRotation(now, Some(now.plus(1826, ChronoUnit.DAYS)))
                         .map { updatedVersions =>
                             k.copy(versions = updatedVersions)
                         }
@@ -434,8 +448,9 @@ object RootKeyShare:
                 case None =>
                     Left("Illegal request: compromised flag must be set before requesting compromise rotation.")
                 case Some(KeyStatusNotice.Compromised) =>
+                    val now = Instant.now()
                     k.versions
-                        .compromiseRotation(Instant.now(), Some(Instant.now().plus(1826, ChronoUnit.DAYS)))
+                        .compromiseRotation(now, Some(now.plus(1826, ChronoUnit.DAYS)))
                         .map { updatedVersions =>
                             k.copy(versions = updatedVersions)
                         }

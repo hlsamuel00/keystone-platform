@@ -71,6 +71,26 @@ class ManagedKeySpec extends AnyFlatSpec with Matchers:
         
         duplicated.dependencies shouldEqual updatedKey.dependencies
     }
+    it should "update dependency set when removing an additional dependent and maintain other details" in {
+        val removedDependency = updatedKey.removeDependency(serviceKeyId)
+
+        removedDependency.dependencies shouldEqual testKey.dependencies
+        removedDependency.keyType shouldEqual testKey.keyType
+        removedDependency.keyId shouldEqual testKey.keyId
+        removedDependency.keyName shouldEqual testKey.keyName
+        removedDependency.versions shouldEqual testKey.versions
+        removedDependency.permissions shouldEqual testKey.permissions
+        removedDependency.owner shouldEqual testKey.owner
+        removedDependency.algorithm shouldEqual testKey.algorithm
+        removedDependency.description shouldEqual testKey.description
+    }
+
+    it should "safely no-op when removing a dependency that was never added" in {
+        val neverAdded: KeyId = UUID.randomUUID()
+        val result = testKey.removeDependency(neverAdded)
+
+        result.dependencies shouldEqual testKey.dependencies
+    }
     
     it should "be usable polymorphically as a Key" in {
         val asKey: Key = testKey
