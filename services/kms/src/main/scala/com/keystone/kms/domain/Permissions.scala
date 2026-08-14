@@ -1,6 +1,7 @@
 package com.keystone.kms.domain
 
 import java.time.Instant
+import scala.annotation.tailrec
 
 /** Representative of the permissions allowed on each key; each permission documents
   * the respective allowed operations by service and each operation is mutually
@@ -23,45 +24,42 @@ object Permissions:
             changeHistory=List.empty)
 
     /** Recursive helper method to traverse list and update ServicePermission once found */
+    @tailrec
     private def updateOrPrepend(
                                  list: List[ServicePermissions],
                                  targetName: String,
-                                 newOps: KeyOperation): (List[ServicePermissions], Boolean) = {
+                                 newOps: KeyOperation,
+                                 acc: List[ServicePermissions] = Nil): (List[ServicePermissions], Boolean) =
         list match {
-            case Nil => (List(ServicePermissions(
-                serviceName=targetName,
-                allowedOperations=Set(newOps)
-            )), true)
+            case Nil =>
+                ( acc.reverse ::: List(ServicePermissions(serviceName=targetName, allowedOperations=Set(newOps))), true)
             case head :: tail if head.serviceName == targetName =>
-                if (head.allowedOperations.contains(newOps)){
-                    (head :: tail, false)
-                } else {
-                    (head.copy(allowedOperations = head.allowedOperations.incl(newOps)) :: tail, true)
-                }
+                if head.allowedOperations.contains(newOps) then
+                    (acc.reverse ::: (head :: tail), false)
+                else
+                    (acc.reverse ::: (head.copy(allowedOperations = head.allowedOperations.incl(newOps)) :: tail), true)
             case head :: tail =>
-                val (list, changed) = updateOrPrepend(tail, targetName, newOps)
-                (head :: list, changed)
+                updateOrPrepend(tail, targetName, newOps, head :: acc)
         }
-    }
 
     /** Recursive helper to traverse list and remove ServicePermission, if found */
+    @tailrec
     private def remove(
                         list: List[ServicePermissions],
                         targetName: String,
-                        opToRemove: KeyOperation): (List[ServicePermissions], Boolean) = {
+                        opToRemove: KeyOperation,
+                        acc: List[ServicePermissions] = Nil): (List[ServicePermissions], Boolean) =
         list match {
-            case Nil => (Nil, false)
+            case Nil =>
+                (acc.reverse , false)
             case head :: tail if head.serviceName == targetName =>
-                if (head.allowedOperations.contains(opToRemove)){
-                    (head.copy(allowedOperations = head.allowedOperations - opToRemove) :: tail, true)
-                } else {
-                    (head :: tail, false)
-                }
+                if head.allowedOperations.contains(opToRemove) then
+                    (acc.reverse ::: (head.copy(allowedOperations = head.allowedOperations - opToRemove) :: tail), true)
+                else
+                    (acc.reverse ::: (head :: tail), false)
             case head :: tail =>
-                val (list, changed) = remove(tail, targetName, opToRemove)
-                (head :: list, changed)
+                remove(tail, targetName, opToRemove, head :: acc)
         }
-    }
 
     extension (p: Permissions)
         def grantOperation(
@@ -69,9 +67,9 @@ object Permissions:
                             keyName: String,
                             operation: KeyOperation,
                             rationale: String,
-                            changedAt: Instant): Permissions = {
+                            changedAt: Instant): Permissions =
             val (updatedPerms, changed) = updateOrPrepend(p.entries, serviceName, operation)
-            if (changed){
+            if changed then
                 val changeUpdate = PermissionChange(
                     serviceName=serviceName,
                     keyName=keyName,
@@ -86,19 +84,17 @@ object Permissions:
                     lastUpdated=changedAt,
                     changeHistory=changeUpdate :: p.changeHistory
                 )
-            } else {
+            else
                 p
-            }
-        }
 
         def revokeOperation(
                              serviceName: String,
                              keyName: String,
                              operation: KeyOperation,
                              rationale: String,
-                             changedAt: Instant): Permissions = {
+                             changedAt: Instant): Permissions =
             val (updatedPerms, changed) = remove(p.entries, serviceName, operation)
-            if (changed){
+            if changed then
                 val changeUpdate = PermissionChange(
                     serviceName = serviceName,
                     keyName = keyName,
@@ -113,7 +109,5 @@ object Permissions:
                     lastUpdated = changedAt,
                     changeHistory = changeUpdate :: p.changeHistory
                 )
-            } else {
+            else
                 p
-            }
-        }
