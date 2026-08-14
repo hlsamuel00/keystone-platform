@@ -234,3 +234,56 @@ Claude security review action to ensure reproducible and
 auditable review behavior between PRs. Model identifiers
 SHALL be reviewed and updated deliberately rather than
 tracking aliases that may resolve differently over time.
+
+### Amendment 2 — 2026-08-14
+
+#### Model String Correction
+The security review workflow (`security-review.yml`) referenced
+`claude-sonnet-4-6`, a model identifier that does not correspond to
+any model Anthropic has published. The workflow SHALL use
+`claude-sonnet-5`, Anthropic's current Sonnet-tier model as of this
+amendment.
+
+#### Model Identifier Policy — Supersedes Amendment 1
+Amendment 1's Model Identifier Policy preferred pinned, dated model
+identifiers over aliases, on the basis that dateless identifiers
+could silently resolve to a different model over time. This concern
+applied to Anthropic's pre-4.6-generation naming convention, where
+dateless names (e.g. `claude-sonnet-4-5`) were floating aliases
+pointing to the most recent dated snapshot.
+
+Starting with the 4.6 generation, Anthropic's dateless model
+identifiers (e.g. `claude-sonnet-5`) are themselves permanently
+fixed snapshots — Anthropic does not update the weights or
+configuration behind an existing model ID once published. The
+original rationale for preferring dated identifiers no longer
+applies under this naming convention, since no separate dated
+variant exists to prefer. Effective immediately, the current
+dateless model ID SHALL be treated as sufficiently pinned for
+reproducibility purposes, and the platform's model identifier
+SHALL be reviewed and updated deliberately whenever Anthropic
+ships a new model generation — consistent with Amendment 1's
+underlying intent, though not its literal mechanism.
+
+#### Diff Truncation Limit Increase
+`max_diff_chars` was increased from 30,000 to 250,000, after the
+KMS domain model refactor PR (#5) produced a diff of approximately
+155,000 characters — more than five times the original limit.
+Truncation logic was also changed to cut at file boundaries
+(`diff --git` markers) rather than mid-file, so any file included
+in a truncated review is always reviewed in its entirety rather
+than left partially analyzed.
+
+Cost analysis at current Sonnet 5 pricing ($2/$10 per million
+input/output tokens) confirms this increase carries negligible
+per-run cost — approximately $0.16 for a full review of PR #5's
+diff, including the output ceiling increase described below. The
+original 30,000-character limit was not a deliberate cost-control
+measure and is superseded by this analysis.
+
+#### Output Token Ceiling Increase
+`max_tokens` for the security review's Anthropic API call was
+increased from 2,048 to 8,192, to prevent the review response
+itself from being truncated on large diffs — a distinct concern
+from the diff truncation limit above, which governs input rather
+than output.
