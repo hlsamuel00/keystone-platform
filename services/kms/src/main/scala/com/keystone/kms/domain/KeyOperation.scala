@@ -3,13 +3,14 @@ package com.keystone.kms.domain
 /** Representative of all operations that can be performed on a KMS key.
   * Each operation is associated with a specific action that can be performed
   * through Crypto Service Provider's (CSP) API. This allows the enforcement of approved transactions at the
-  * type level, ensuring only explicitly authorized services can invoke a given cryptographic operation 
+  * type level, ensuring only explicitly authorized services can invoke a given cryptographic operation
   * through CSP.
-  * 
-  * Restriction: Each operation is designed to be mutually exclusive. For example, a service that has been 
-  * granted Encrypt permission cannot perform Decrypt operations, unless explicitly granted through the 
-  * Decrypt operation. This allows for fine-grained access control and minimizes the blast radius of 
-  * potential key misuse. 
+  *
+  * Independence: Each operation is granted independently and never implies another. For example, granting
+  * a service Encrypt permission does not automatically grant Decrypt permission — each must be explicitly
+  * requested and granted on its own. This applies to every paired operation (Encrypt/Decrypt, Wrap/Unwrap,
+  * Sign/Verify) and allows for fine-grained access control, minimizing the blast radius of potential key
+  * misuse by ensuring a service only holds exactly the operations it was explicitly granted.
   */
 sealed trait KeyOperation
 
