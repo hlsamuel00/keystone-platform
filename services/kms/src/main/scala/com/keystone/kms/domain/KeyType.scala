@@ -23,9 +23,9 @@ object KeyType:
       */
     case object DEK extends KeyType
 
-    /** This key type is inteded for performing encryption and decryption operations directly on data in transit. 
+    /** This key type is intended for performing encryption and decryption operations directly on data in transit.
       * The purpose of this key is to ensure that data in transit is protected and can only be accessed by authorized
-      * entities with the appropriate permissions. This key type is commonly used for encrypting sensitive data transmited
+      * entities with the appropriate permissions. This key type is commonly used for encrypting sensitive data transmitted
       * over networks, published to topics, or transmitted through other communication channels, providing an additional 
       * layer of security for data in transit.
       */
@@ -36,7 +36,7 @@ object KeyType:
       * recipients that the data has not been tampered with and is from a trusted source. This key type is commonly used for
       * signing sensitive data transmitted over networks, published to topics, or transmitted through other communication channels,
       * providing an additional layer of security for data in transit. This key type is asymmetric in nature, as the signing and
-      * verification operations typically involve a private key for signing and a public key for verification, allowing for secure
+      * verification operations typically involve a private key for signing and a public key for verification. This allows for secure
       * digital signature management and verification without exposing the private key to unauthorized entities.
       */
     case object SigningKey extends KeyType
@@ -55,7 +55,7 @@ object KeyType:
       * establishing trust with other services, and enabling permission management based on the service's identity. This key
       * type is critical for ensuring that services can securely identify themselves and establish trust relationships. This key
       * type is asymmetric in nature, as the signing and verification operations typically involve a private key for signing and a
-      * public key for verification, allowing for secure identity management and verification without exposing the private key to 
+      * public key for verification. This allows for secure identity management and verification without exposing the private key to
       * unauthorized entities. This key type is not intended for general cryptographic operations and should be used exclusively for 
       * service identity management. 
       */
@@ -63,7 +63,7 @@ object KeyType:
 
     /** This key type is solely intended for one of two independent shares of the platform root key. The purpose of this key is to ensure
       * that the platform root key is securely managed and protected. Neither share of the platform root key is sufficient alone and their sole
-      * purpose is to be combined together to reconstruct the platform root key. The key shares will never be stored together, and construction
+      * purpose is to be combined to reconstruct the platform root key. The key shares will never be stored together, and construction
       * will only occur in memory when performing operations and immediately discarded after use. This key type is critical for ensuring the security 
       * of the platform root key, which is the basis for all trust in cryptographic operations within the platform. 
       */
