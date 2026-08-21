@@ -524,6 +524,22 @@ class ManagedKeySpec extends AnyFlatSpec with Matchers:
             case Right(provisioned) =>
                 provisioned.clearException match
                     case Right(cleared) =>
+                        cleared.lifecycleWindDown match
+                            case Right(woundDown) =>
+                                val versionId = cleared.versions.entries.head.versionId
+                                woundDown.retireVersion(versionId) match
+                                    case Right(retired) =>
+                                        retired.decommission match
+                                            case Right(decommissioned) =>
+                                                decommissioned.exceptionStatus shouldBe Some(KeyStatusNotice.Decommissioned)
+                                                decommissioned.versions shouldEqual retired.versions
+                                                decommissioned.markCompromised shouldBe a [Left[?, ?]]
+                                            case Left(err) =>
+                                                fail(s"Expected legal decommissioning, but got: $err")
+                                    case Left(err) =>
+                                        fail(s"Expected legal version retiring, but got: $err")
+                            case Left(err) =>
+                                fail(s"Expected legal lifecycle wind down, but got: $err")
                         cleared.markCompromised match
                             case Right(compromised) =>
                                 compromised.compromiseRetire match
@@ -552,6 +568,20 @@ class ManagedKeySpec extends AnyFlatSpec with Matchers:
             case Right(provisioned) =>
                 provisioned.clearException match
                     case Right(cleared) =>
+                        cleared.lifecycleWindDown match
+                            case Right(woundDown) =>
+                                val versionId = cleared.versions.entries.head.versionId
+                                woundDown.retireVersion(versionId) match
+                                    case Right(retired) =>
+                                        retired.decommission match
+                                            case Right(decommissioned) =>
+                                                decommissioned.decommission shouldBe a [Left[?, ?]]
+                                            case Left(err) =>
+                                                fail(s"Expected legal decommissioning, but got $err")
+                                    case Left(err) =>
+                                        fail(s"Expected legal retiring, but got $err")
+                            case Left(err) =>
+                                fail(s"Expected legal wind down, but got: $err")
                         cleared.markCompromised match
                             case Right(compromised) =>
                                 compromised.decommission shouldBe a [Left[?, ?]]
@@ -563,3 +593,25 @@ class ManagedKeySpec extends AnyFlatSpec with Matchers:
                 fail(s"Expected legal provisioning, but got: $err")
     }
 
+    it should "reject decommissioning a key with unresolved dependent keys" in {
+        val dependentKeyId: KeyId = UUID.randomUUID()
+
+        testKey.provision(None) match
+            case Right(provisioned) =>
+                provisioned.clearException match
+                    case Right(cleared) =>
+                        cleared.markCompromised match
+                            case Right(compromised) =>
+                                compromised.compromiseRetire match
+                                    case Right(retired) =>
+                                        val retiredWithDependency = retired.withDependency(dependentKeyId)
+                                        retiredWithDependency.decommission shouldBe a [Left[?, ?]]
+                                    case Left(err) =>
+                                        fail(s"Expected legal compromise rotation, but got: $err")
+                            case Left(err) =>
+                                fail(s"Expected legal compromise status update, but got: $err")
+                    case Left(err) =>
+                        fail(s"Expected legal exception clearing, but got: $err")
+            case Left(err) =>
+                fail(s"Expected legal provisioning, but got: $err")
+    }

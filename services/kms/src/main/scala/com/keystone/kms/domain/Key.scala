@@ -308,23 +308,42 @@ object ManagedKey:
                     Left("Illegal request: cannot remove exception without an Active version.")
 
         /** Permanently decommissions a key by setting its exception status to
-          * Decommissioned. Requires the current version to be Retired — keys
-          * with Active or Inactive versions still in use cannot be decommissioned.
-          * This is a terminal state; the key cannot be returned to service.
+          * Decommissioned. Requires the current version to be Retired and all
+          * dependent keys to be resolved (see removeDependency) — keys with
+          * Active or Inactive versions, or unresolved dependencies, cannot be
+          * decommissioned. Reachable from exceptionStatus None (standard
+          * lifecycle drain) or Some(Compromised) (compromise-driven retirement).
+          *
+          * Note: PendingApproval and Rejected are not handled in the inner match —
+          * both states imply no version material exists, so they can never reach
+          * this branch given the outer Retired-version guard. Exhaustivity checking
+          * ensures any future KeyStatusNotice addition surfaces as a compiler error
+          * here rather than falling through silently.
           *
           * Note: intentionally mirrors RootKeyShare.decommission — divergence
           * expected once RootKeyShare approval ceremony is defined (see W-2).
           */
         def decommission: Either[String, ManagedKey] =
-            k.versions.entries.headOption match
-                case None =>
-                    Left("Illegal request: cannot decommission a key with no version record.")
-                case Some(version) if version.status == KeyVersionStatus.Retired =>
-                    KeyStatusNoticeTransition.transition(k.exceptionStatus, Some(KeyStatusNotice.Decommissioned)).map { keyStatus =>
-                        k.copy(exceptionStatus = keyStatus)
-                    }
-                case Some(version) =>
-                    Left("Illegal request: cannot decommission a key with an Active or Inactive version.")
+            if k.dependencies.nonEmpty then
+                Left(s"Illegal request: cannot decommission a key with ${k.dependencies.size} unresolved dependent key(s).")
+            else
+                k.versions.entries.headOption match
+                    case None =>
+                        Left("Illegal request: cannot decommission a key with no version record.")
+                    case Some(version) if version.status == KeyVersionStatus.Retired =>
+                        k.exceptionStatus match
+                            case None =>
+                                Right(k.copy(exceptionStatus = Some(KeyStatusNotice.Decommissioned)))
+                            case Some(KeyStatusNotice.Compromised) =>
+                                KeyStatusNoticeTransition.transition(k.exceptionStatus, Some(KeyStatusNotice.Decommissioned)).map { keyStatus =>
+                                    k.copy(exceptionStatus = keyStatus)
+                                }
+                            case Some(KeyStatusNotice.Decommissioned) =>
+                                Left("Illegal request: key is already decommissioned.")
+                            case Some(other) =>
+                                Left(s"Illegal request: cannot decommission a key with exception status $other.")
+                    case Some(version) =>
+                        Left("Illegal request: cannot decommission a key with an Active or Inactive version.")
 
 /** Representative of each of the two halves of the RootKeyShare with the following
   * fields:
