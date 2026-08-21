@@ -26,8 +26,17 @@ class PermissionChangeSpec extends AnyFlatSpec with Matchers:
     )
 
     "PermissionChange" should "ensure records are created for both grant and revoke requests" in {
+        grantedChange.serviceName shouldBe "test service"
+        grantedChange.keyName shouldBe "test-AES-key"
+        grantedChange.operation shouldBe KeyOperation.Encrypt
         grantedChange.status shouldBe PermissionChangeStatus.Granted
+        grantedChange.rationale shouldBe "Access to ENCRYPT with key needed for topic publishing"
+
+        revokedChange.serviceName shouldBe "test service"
+        revokedChange.keyName shouldBe "test-AES-key"
+        revokedChange.operation shouldBe KeyOperation.Decrypt
         revokedChange.status shouldBe PermissionChangeStatus.Revoked
+        revokedChange.rationale shouldBe "Access to DECRYPT with key revoked due to no longer being used"
     }
 
     it should "ensure the record is timestamped correctly" in {

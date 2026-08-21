@@ -2,10 +2,9 @@ package com.keystone.kms.domain
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
 import java.time.Instant
 
-class PermissionsSpec extends AnyFlatSpec with Matchers with Inside:
+class PermissionsSpec extends AnyFlatSpec with Matchers:
     val v1: Permissions = Permissions.create()
     "Permissions" should "create an empty record when initialized" in {
         v1.entries shouldBe empty
@@ -77,4 +76,49 @@ class PermissionsSpec extends AnyFlatSpec with Matchers with Inside:
         )
         v5.entries.head.allowedOperations shouldEqual v4.entries.head.allowedOperations
         v5.changeHistory shouldEqual v4.changeHistory
+    }
+
+    it should "capture accurate audit-record fields for both grant and revoke operations" in {
+        val grantedAt = Instant.now()
+        val revokedAt = grantedAt.plusSeconds(60)
+    
+        val granted = Permissions.create().grantOperation(
+            serviceName="test-service",
+            keyName="test-AES-key",
+            operation=KeyOperation.Encrypt,
+            rationale="initial access for payment encryption",
+            changedAt=grantedAt
+        )
+    
+        granted.changeHistory should have size 1
+        val grantRecord = granted.changeHistory.head
+        grantRecord.serviceName shouldBe "test-service"
+        grantRecord.keyName shouldBe "test-AES-key"
+        grantRecord.operation shouldBe KeyOperation.Encrypt
+        grantRecord.status shouldBe PermissionChangeStatus.Granted
+        grantRecord.rationale shouldBe "initial access for payment encryption"
+        grantRecord.changedAt shouldBe grantedAt
+        granted.lastUpdated shouldBe grantedAt
+    
+        val revoked = granted.revokeOperation(
+            serviceName="test-service",
+            keyName="test-AES-key",
+            operation=KeyOperation.Encrypt,
+            rationale="service decommissioned, access no longer needed",
+            changedAt=revokedAt
+        )
+    
+        revoked.changeHistory should have size 2
+        val revokeRecord = revoked.changeHistory.head
+        revokeRecord.serviceName shouldBe "test-service"
+        revokeRecord.keyName shouldBe "test-AES-key"
+        revokeRecord.operation shouldBe KeyOperation.Encrypt
+        revokeRecord.status shouldBe PermissionChangeStatus.Revoked
+        revokeRecord.rationale shouldBe "service decommissioned, access no longer needed"
+        revokeRecord.changedAt shouldBe revokedAt
+        revoked.lastUpdated shouldBe revokedAt
+    
+        // changeHistory is append-only — confirm the grant record still exists,
+        // unaltered, after the revoke event was prepended.
+        revoked.changeHistory.tail.head shouldBe grantRecord
     }
