@@ -245,6 +245,11 @@ object Versions:
           *
           * Note: If the rationale provided does not match the previous rational provided when
           * the active version was transitioned, the method will return a Left.
+          *
+          * Note: unlike provision/lifecycleRotation/compromiseRotation, this call intentionally
+          * reads Instant.now() directly rather than accepting a timestamp parameter — resuming
+          * is the immediate act itself, not a step whose timestamp originates from an earlier
+          * point in the engine's workflow.
           */
         def resumeWithNewVersion(rationale: KeyVersionRationale, expirationDate: Option[Instant]): Either[String, Versions] =
             createNewVersion(v, expirationDate, rationale, Instant.now())
