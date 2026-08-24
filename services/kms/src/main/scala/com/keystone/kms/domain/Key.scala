@@ -378,8 +378,16 @@ case class RootKeyShare private(
                                createdAt: Instant) extends Key
 
 object RootKeyShare:
+    /** The validity period, in days, applied to every RootKeyShare version's
+      * expirationDate. Centralized here so provision, lifecycleRotation, and
+      * compromiseRotation always compute the same window from a single source
+      * of truth, rather than repeating the literal at each call site.
+      */
+    private val RootKeyShareValidityDays = 1826L
+
     /** Creates a RootKeyShare derived from Key. The smart constructor requires
-      * no parameters and the platform generates all required fields */
+      * no parameters and the platform generates all required fields
+      */
     def create(): RootKeyShare =
 
         RootKeyShare(
@@ -421,7 +429,7 @@ object RootKeyShare:
                 case Some(KeyStatusNotice.PendingApproval) =>
                     val now = Instant.now()
                     k.versions
-                        .provision(now, Some(now.plus(1826, ChronoUnit.DAYS)))
+                        .provision(now, Some(now.plus(RootKeyShareValidityDays, ChronoUnit.DAYS)))
                         .map { updatedVersions =>
                             k.copy(versions = updatedVersions)
                         }
@@ -443,7 +451,7 @@ object RootKeyShare:
                 case None =>
                     val now = Instant.now()
                     k.versions
-                        .lifecycleRotation(now, Some(now.plus(1826, ChronoUnit.DAYS)))
+                        .lifecycleRotation(now, Some(now.plus(RootKeyShareValidityDays, ChronoUnit.DAYS)))
                         .map { updatedVersions =>
                             k.copy(versions = updatedVersions)
                         }
@@ -469,7 +477,7 @@ object RootKeyShare:
                 case Some(KeyStatusNotice.Compromised) =>
                     val now = Instant.now()
                     k.versions
-                        .compromiseRotation(now, Some(now.plus(1826, ChronoUnit.DAYS)))
+                        .compromiseRotation(now, Some(now.plus(RootKeyShareValidityDays, ChronoUnit.DAYS)))
                         .map { updatedVersions =>
                             k.copy(versions = updatedVersions)
                         }
