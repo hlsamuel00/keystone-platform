@@ -205,6 +205,12 @@ class VersionsSpec extends AnyFlatSpec with Matchers:
             case Right(newV) =>
                 newV.resumeWithNewVersion(KeyVersionRationale.LifecycleRotation, None) shouldBe a [Left[?, ?]]
 
+                newV.compromiseRetire(Instant.now()) match
+                    case Right(retiredV) =>
+                        retiredV.resumeWithNewVersion(KeyVersionRationale.CompromiseRotation, None) shouldBe a [Left[?, ?]]
+                    case Left(err) =>
+                        fail(s"Expected a legal compromised retire, but got: $err")
+
                 newV.lifecycleWindDown(Instant.now()) match
                     case Right(windDownV) =>
                         windDownV.resumeWithNewVersion(KeyVersionRationale.CompromiseRotation, None) shouldBe a [Left[?, ?]]

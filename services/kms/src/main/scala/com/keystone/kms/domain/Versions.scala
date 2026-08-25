@@ -254,4 +254,10 @@ object Versions:
           * point in the engine's workflow.
           */
         def resumeWithNewVersion(rationale: KeyVersionRationale, expirationDate: Option[Instant]): Either[String, Versions] =
-            createNewVersion(v, expirationDate, rationale, Instant.now())
+            v.entries.headOption match
+                case Some(current) if current.status != KeyVersionStatus.Inactive =>
+                    Left("Illegal operation: resumeWithNewVersion requires the current version to be Inactive.")
+                case _ =>
+                    // Intentional — see note at the Instant.now() call above regarding this
+                    // method's clock-read timing.
+                    createNewVersion(v, expirationDate, rationale, Instant.now())
