@@ -215,7 +215,7 @@ object Versions:
           *
           * Note: Currently the default rationale is LifecycleRotation as other rationales are
           * added to move a key version from Active to Inactive, the rational will need to be migrated
-          * to accept it as a parameter.
+          * to accept it as a parameter. See issue #9.
           */
         def retireVersion(versionId: UUID, changedAt: Instant): Either[String, Versions] =
             retire(v.entries, versionId).map { entries =>
