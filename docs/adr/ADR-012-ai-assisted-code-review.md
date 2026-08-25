@@ -246,9 +246,9 @@ Truncation logic was also changed to cut at file boundaries
 in a truncated review is always reviewed in its entirety rather
 than left partially analyzed.
 
-Cost analysis at current Sonnet pricing ($2/$10 per million
+Cost analysis at claude-sonnet-4-6 pricing ($3/$15 per million
 input/output tokens) confirms this increase carries negligible
-per-run cost — approximately $0.16 for a full review of PR #5's
+per-run cost — approximately $0.24 for a full review of PR #5's
 diff, including the output ceiling increase described below. The
 original 30,000-character limit was not a deliberate cost-control
 measure and is superseded by this analysis.
