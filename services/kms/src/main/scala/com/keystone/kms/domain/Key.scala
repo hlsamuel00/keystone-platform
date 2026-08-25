@@ -294,7 +294,7 @@ object ManagedKey:
           * their exception cleared.
           *
           * Note: intentionally mirrors RootKeyShare.clearException — divergence
-          * expected once RootKeyShare approval ceremony is defined (see W-2).
+          * expected once RootKeyShare approval ceremony is defined (see W-2, issue #8).
           */
         def clearException: Either[String, ManagedKey] =
             k.versions.entries.headOption match
@@ -321,7 +321,7 @@ object ManagedKey:
           * here rather than falling through silently.
           *
           * Note: intentionally mirrors RootKeyShare.decommission — divergence
-          * expected once RootKeyShare approval ceremony is defined (see W-2).
+          * expected once RootKeyShare approval ceremony is defined (see W-2, issue #8).
           */
         def decommission: Either[String, ManagedKey] =
             if k.dependencies.nonEmpty then
@@ -368,7 +368,7 @@ object ManagedKey:
   * intentionally absent from RootKeyShare. As a Tier-0 platform object, root key material must
   * always be replaced atomically — wind-down without replacement would leave the platform's
   * root of trust in an unrecoverable degraded state. All rotations use the full
-  * atomic lifecycle and compromiseRotation methods exclusively.
+  * atomic lifecycle and compromiseRotation methods exclusively. See W-2, issue #8.
   */
 case class RootKeyShare private(
                                keyId: KeyId,
@@ -401,7 +401,7 @@ object RootKeyShare:
     extension (k: RootKeyShare)
         /** Removes the key-level exception flag when a valid Active version exists.
           * Behaves identically to ManagedKey.clearException for now — divergence
-          * expected once RootKeyShare multi-party approval ceremony is defined (see W-2).
+          * expected once RootKeyShare multi-party approval ceremony is defined (see W-2, issue #8).
           */
         def clearException: Either[String, RootKeyShare] =
             k.versions.entries.headOption match
@@ -420,7 +420,7 @@ object RootKeyShare:
           * keys in any other state cannot be provisioned.
           *
           * Note: intentionally mirrors ManagedKey.provision — divergence expected
-          * once RootKeyShare multi-party approval ceremony is defined (see W-2).
+          * once RootKeyShare multi-party approval ceremony is defined (see W-2, issue #8).
           */
         def provision: Either[String, RootKeyShare] =
             k.exceptionStatus match
@@ -444,7 +444,7 @@ object RootKeyShare:
           * rotated through the standard lifecycle path.
           *
           * Note: intentionally mirrors ManagedKey.lifecycleRotation — divergence expected
-          * once RootKeyShare multi-party approval ceremony is defined (see W-2).
+          * once RootKeyShare multi-party approval ceremony is defined (see W-2, issue #8).
           */
         def lifecycleRotation: Either[String, RootKeyShare] =
             k.exceptionStatus match
@@ -468,7 +468,7 @@ object RootKeyShare:
           * be set explicitly before this rotation can be triggered.
           *
           * Note: intentionally mirrors ManagedKey.compromiseRotation — divergence expected
-          * once RootKeyShare multi-party approval ceremony is defined (see W-2).
+          * once RootKeyShare multi-party approval ceremony is defined (see W-2, issue #8).
           */
         def compromiseRotation: Either[String, RootKeyShare] =
             k.exceptionStatus match
@@ -492,7 +492,7 @@ object RootKeyShare:
          * exceptional state cannot be marked compromised.
          *
          * Note: intentionally mirrors ManagedKey.markCompromised — divergence expected
-         * once RootKeyShare multi-party approval ceremony is defined (see W-2).
+         * once RootKeyShare multi-party approval ceremony is defined (see W-2, issue #8).
          */
         def markCompromised: Either[String, RootKeyShare] =
             KeyStatusNoticeTransition
