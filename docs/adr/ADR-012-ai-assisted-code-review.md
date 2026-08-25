@@ -234,3 +234,38 @@ Claude security review action to ensure reproducible and
 auditable review behavior between PRs. Model identifiers
 SHALL be reviewed and updated deliberately rather than
 tracking aliases that may resolve differently over time.
+
+### Amendment 2 — 2026-08-14
+
+#### Diff Truncation Limit Increase
+`max_diff_chars` was increased from 30,000 to 250,000, after the
+KMS domain model refactor PR (#5) produced a diff of approximately
+155,000 characters — more than five times the original limit.
+Truncation logic was also changed to cut at file boundaries
+(`diff --git` markers) rather than mid-file, so any file included
+in a truncated review is always reviewed in its entirety rather
+than left partially analyzed.
+
+Cost analysis at claude-sonnet-4-6 pricing ($3/$15 per million
+input/output tokens) confirms this increase carries negligible
+per-run cost — approximately $0.24 for a full review of PR #5's
+diff, including the output ceiling increase described below. The
+original 30,000-character limit was not a deliberate cost-control
+measure and is superseded by this analysis.
+
+#### Output Token Ceiling Increase
+`max_tokens` for the security review's Anthropic API call was
+increased from 2,048 to 8,192, to prevent the review response
+itself from being truncated on large diffs — a distinct concern
+from the diff truncation limit above, which governs input rather
+than output.
+
+#### Response Parsing Fix
+The security review script assumed the first content block in
+Claude's API response was always the review text
+(`message.content[0].text`). When adaptive or extended thinking is
+active, the response may include a `ThinkingBlock` before the
+`TextBlock` containing the actual review, causing this assumption
+to fail with an `AttributeError`. The script was updated to
+locate the text block explicitly by its `type` field rather than
+assuming a fixed position.

@@ -69,6 +69,7 @@ jobs:
           python3 << 'PYTHON'
           import anthropic
           import os
+          import re
 
           # Load security review prompt
           with open(".github/prompts/security-review-prompt.md", "r") as f:
@@ -78,26 +79,51 @@ jobs:
           with open("pr_diff.txt", "r") as f:
               diff = f.read()
 
-          # Truncate diff if too large — avoids token limit issues
-          max_diff_chars = 30000
+          # Truncate diff if too large — avoids exceeding context limits.
+          # Cuts at file boundaries (diff --git markers) rather than mid-file,
+          # so any included file is always reviewed in full.
+          max_diff_chars = 250000
           if len(diff) > max_diff_chars:
-              diff = diff[:max_diff_chars] + "\n\n[Diff truncated — review remaining changes manually]"
+              file_markers = [m.start() for m in re.finditer(r'^diff --git', diff, re.MULTILINE)]
+              cutoff = max_diff_chars
+              for marker in file_markers:
+                  if marker > max_diff_chars:
+                      break
+                  cutoff = marker
+              if cutoff == 0:
+                  print(f"Error: first changed file exceeds max_diff_chars ({max_diff_chars}); cannot safely truncate. Review manually.")
+                  exit(1)
+              diff = diff[:cutoff] + "\n\n[Diff truncated — remaining files not shown, review manually]"
 
           client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-          try: 
-            message = client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=2048,
-                system=system_prompt,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"Please review the following PR diff against the platform security constraints:\n\n```diff\n{diff}\n```"
-                    }
-                ]
-            )
+          try:
+              message = client.messages.create(
+                  model="claude-sonnet-4-6",
+                  max_tokens=8192,
+                  system=system_prompt,
+                  messages=[
+                      {
+                          "role": "user",
+                          "content": f"Please review the following PR diff against the platform security constraints:\n\n```diff\n{diff}\n```"
+                      }
+                  ]
+              )
 
-            review = message.content[0].text
+              # Fail closed on incomplete responses — stop_reason values other than
+              # end_turn indicate the response was cut off (max_tokens) or declined
+              # (refusal), and should not be posted to the PR as a complete review.
+              if message.stop_reason not in ("end_turn", "stop_sequence"):
+                  print(f"Error: response did not complete normally (stop_reason={message.stop_reason}).")
+                  exit(1)
+
+              # Response content may include a ThinkingBlock before the TextBlock
+              # when adaptive/extended thinking is active — locate the text block
+              # explicitly rather than assuming content[0] is text.
+              review = next((block.text for block in message.content if block.type == "text"), None)
+              if review is None:
+                  print("Error: no text block found in Claude's response.")
+                  exit(1)
+
           except anthropic.AnthropicError as e:
               print(f"Anthropic API error: {e}")
               exit(1)
