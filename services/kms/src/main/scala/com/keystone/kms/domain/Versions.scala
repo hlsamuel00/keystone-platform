@@ -74,7 +74,7 @@ object Versions:
                 Left("Illegal operation: key material must be first provisioned.")
             case Some(current) if current.status == KeyVersionStatus.Active =>
                 Left("Illegal operation: only one version can be active at a time.")
-            case Some(current) if versions.changeHistory.head.rationale == rationale =>
+            case Some(current) if versions.changeHistory.headOption.map(_.rationale).contains(rationale) =>
                 val replacement = KeyVersion.createVersion(
                     previousVersion=Some(current),
                     createdAt=occurredAt,
@@ -93,6 +93,8 @@ object Versions:
                     entries=replacement :: versions.entries,
                     changeHistory=record :: versions.changeHistory
                 ))
+            case Some(_) if versions.changeHistory.isEmpty =>
+                Left("Illegal operation: no change history exists to validate rationale against.")
             case Some(_) =>
                 Left("Illegal operation: rationale must match most recent change history entry.")
 
